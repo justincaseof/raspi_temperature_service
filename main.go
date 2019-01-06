@@ -1,23 +1,19 @@
 package main
 
 import (
+	"go.uber.org/zap"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"os/signal"
-	"raspi_readtemp/database"
 	"raspi_readtemp/logging"
-	"raspi_readtemp/readtemperature"
+	"raspi_temperature_service/database"
 	"syscall"
-	"time"
-
-	"go.uber.org/zap"
-	yaml "gopkg.in/yaml.v2"
 )
 
 var logger = logging.New("raspi_temperature_service", false)
-const DB_CONFIG_FILENAME = "dbconfig.yml"
 
-var temperatureInfoChannel = make(chan readtemperature.TemperatureInfo)
+const DB_CONFIG_FILENAME = "dbconfig.yml"
 
 func main() {
 	logger.Info("### STARTUP")
@@ -28,9 +24,9 @@ func main() {
 	database.Open(&cfg)
 	defer database.Close()
 
-	// GO
-	go loopedTemperatureRead()
-	go temperaturePrinter()
+	// TEST...
+	database.InsertMeasurement(11, "Celsius")
+	database.FindMeasurements()
 
 	// wait indefinitely until external abortion
 	sigs := make(chan os.Signal, 1)
@@ -55,38 +51,4 @@ func readDatabaseConfig(dbconfig *database.DBConfig) {
 		panic(err)
 	}
 	logger.Info("DBConfig parsed.")
-}
-
-func temperaturePrinter() {
-	for {
-		info := <-temperatureInfoChannel
-
-		logger.Info("Current Temperature: ", zap.String("Unit", info.Unit), zap.Float32("Value", info.Value))
-
-		err := database.InsertMeasurement(info)
-		if err != nil {
-			logger.Error("Cannot persist measurement")
-		}
-
-	}
-}
-
-func temperatureRead() {
-	info, err := readtemperature.GetTemp()
-	if err == nil {
-		//logger.Info("Current Temperature: ", zap.String("Unit", info.Unit), zap.Float32("Value", info.Value));
-		temperatureInfoChannel <- info
-	} else {
-		logger.Error("Could not read temperature: ", zap.Error(err))
-	}
-
-}
-
-func loopedTemperatureRead() {
-	for {
-		select {
-		case <-time.After(5 * time.Second):
-			temperatureRead()
-		}
-	}
 }

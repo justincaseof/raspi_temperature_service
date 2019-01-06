@@ -25,7 +25,7 @@ type DBConfig struct {
 	DeviceId string `yaml:"device-id"`
 }
 
-type Measurement struct {
+type measurement struct {
 	Id         int64 `xorm:"pk not null autoincr"`
 	Value      float32
 	Unit       string
@@ -87,22 +87,36 @@ func Close() {
 }
 
 // InsertMeasurement -- insert a measurement
-func InsertMeasurement(measurement Measurement) error {
+func InsertMeasurement(value float32, unit string) error {
 	logger.Debug("Inserting meaurement ...",
-		zap.Float32("value", measurement.Value),
-		zap.String("unit", measurement.Unit))
+		zap.Float32("value", value),
+		zap.String("unit", unit))
 
-	measurement.InstanceId = dbconfig.DeviceId
-	affected, err := xormengine.Insert(measurement)
+	m := new(measurement)
+	m.Value = value
+	m.Unit = unit
+	m.InstanceId = dbconfig.DeviceId
+	affected, err := xormengine.Insert(m)
 
 	if err != nil {
 		return err
 	} else {
 		logger.Info("Measurement successfully inserted", zap.Int64("affected", affected))
-		logger.Info("  --> measurement_id", zap.Int64("measurement_id", measurement.Id))
+		logger.Info("  --> measurement_id", zap.Int64("measurement_id", m.Id))
 	}
 
 	return nil
+}
+
+func FindMeasurements() {
+	var measurements []measurement
+	err := xormengine.Where("instance_id = ?", dbconfig.DeviceId).Limit(100).Find(&measurements)
+	if err != nil {
+		panic(err)
+	}
+	if measurements != nil && len(measurements) > 0 {
+		logger.Info("We have been here already: Found existing measurements.")
+	}
 }
 
 /**
@@ -114,7 +128,7 @@ func ensureTableExists() error {
 		return errors.New("Cannot use empty device id!")
 	}
 
-	err := xormengine.Sync(new(Measurement))
+	err := xormengine.Sync(new(measurement))
 	if err != nil {
 		return err
 	}
