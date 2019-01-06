@@ -1,0 +1,7 @@
+type: postgres
+host: 127.0.0.1
+port: 5432
+dbname: pitemp
+username: pitemp
+password: pitemp
+device-id: dev_device_id
