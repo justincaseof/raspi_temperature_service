@@ -101,7 +101,7 @@ func InsertMeasurement(value float32, unit string) error {
 	if err != nil {
 		return err
 	} else {
-		logger.Info("Measurement successfully inserted", zap.Int64("affected", affected))
+		logger.Info("Measurement successfully inserted measurement.", zap.Int64("number_of_insertions", affected))
 		logger.Info("  --> measurement_id", zap.Int64("measurement_id", m.Id))
 	}
 
@@ -115,7 +115,7 @@ func FindMeasurements() {
 		panic(err)
 	}
 	if measurements != nil && len(measurements) > 0 {
-		logger.Info("We have been here already: Found existing measurements.")
+		logger.Info("We have been here already: Found existing measurements for our device-id.", zap.String("device-id", dbconfig.DeviceId))
 	}
 }
 
