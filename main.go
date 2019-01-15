@@ -1,17 +1,20 @@
 package main
 
 import (
+	"github.com/go-chi/chi"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/signal"
 	"raspi_readtemp/logging"
 	"raspi_temperature_service/database"
+	"raspi_temperature_service/web"
 	"syscall"
 )
 
-var logger = logging.New("raspi_temperature_service", false)
+var logger = logging.New("raspi_temperature_service_main", false)
 
 const DB_CONFIG_FILENAME = "dbconfig.yml"
 
@@ -27,6 +30,17 @@ func main() {
 	// TEST...
 	database.InsertMeasurement(11, "Celsius")
 	database.FindMeasurements()
+
+	// REST stuff
+	chiRouter := chi.NewMux()
+	if err := web.SetupChi(chiRouter); err != nil {
+		logger.Error("Error registering server", zap.Error(err))
+		os.Exit(1)
+	}
+	if err := http.ListenAndServe(":8083", chiRouter); err != nil {
+		logger.Error("Error starting http listener", zap.Error(err))
+		os.Exit(1)
+	}
 
 	// wait indefinitely until external abortion
 	sigs := make(chan os.Signal, 1)
