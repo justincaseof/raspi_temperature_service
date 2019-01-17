@@ -28,8 +28,9 @@ func main() {
 	defer database.Close()
 
 	// TEST...
-	database.InsertMeasurement(11, "Celsius")
-	database.FindMeasurements()
+	measurementRepo := database.InitMeasurementRepository()
+	measurementRepo.InsertMeasurement(11, "Celsius")
+	measurementRepo.FindMeasurements()
 
 	// REST stuff
 	chiRouter := chi.NewMux()
