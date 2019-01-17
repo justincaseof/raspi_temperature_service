@@ -7,13 +7,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-type MeasurementRepository struct {
+type IMeasurementRepository interface {
+	InsertMeasurement(value float32, unit string) error
+	FindMeasurements()
+}
+
+type measurementRepository struct {
 	xormengine *xorm.Engine
 }
 
 // Init
-func InitMeasurementRepository() MeasurementRepository {
-	result := MeasurementRepository{
+func NewMeasurementRepository() IMeasurementRepository {
+	result := measurementRepository{
 		// simply copy global xormengine (package 'database') reference into our local struct. dunno whether or not this is useful.
 		xormengine: xormengine,
 	}
@@ -28,7 +33,7 @@ func InitMeasurementRepository() MeasurementRepository {
 }
 
 // InsertMeasurement -- insert a measurement
-func (repo MeasurementRepository) InsertMeasurement(value float32, unit string) error {
+func (repo measurementRepository) InsertMeasurement(value float32, unit string) error {
 	logger.Debug("Inserting meaurement ...",
 		zap.Float32("value", value),
 		zap.String("unit", unit))
@@ -49,7 +54,7 @@ func (repo MeasurementRepository) InsertMeasurement(value float32, unit string) 
 	return nil
 }
 
-func (repo MeasurementRepository) FindMeasurements() {
+func (repo measurementRepository) FindMeasurements() {
 	var measurements []model.Measurement
 	err := repo.xormengine.Where("instance_id = ?", dbconfig.DeviceId).Limit(100).Find(&measurements)
 	if err != nil {
@@ -63,7 +68,7 @@ func (repo MeasurementRepository) FindMeasurements() {
 /**
   tableIdentifier should be the raspi's mac address
 */
-func (repo MeasurementRepository) ensureTableExists() error {
+func (repo measurementRepository) ensureTableExists() error {
 	// simple validation
 	if len(dbconfig.DeviceId) < 1 {
 		return errors.New("Cannot use empty device id!")

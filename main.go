@@ -28,8 +28,8 @@ func main() {
 	defer database.Close()
 
 	// TEST...
-	measurementRepo := database.InitMeasurementRepository()
-	measurementRepo.InsertMeasurement(11, "Celsius")
+	measurementRepo := database.NewMeasurementRepository()
+	measurementRepo.InsertMeasurement(17, "Celsius")
 	measurementRepo.FindMeasurements()
 
 	// REST stuff
