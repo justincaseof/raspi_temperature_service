@@ -2,14 +2,15 @@ package database
 
 import (
 	"github.com/go-xorm/xorm"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"raspi_temperature_service/model"
-	"github.com/pkg/errors"
 )
 
 type IMeasurementRepository interface {
-	InsertMeasurement(value float32, unit string) error
-	FindMeasurements()
+	InsertMeasurement(value float32, unit string, instanceId string) (error, *model.Measurement)
+	FindMeasurementByID(measurementId string) (error, *model.Measurement)
+	FindAllMeasurements() (error, []*model.Measurement)
 }
 
 type measurementRepository struct {
@@ -33,36 +34,51 @@ func NewMeasurementRepository() IMeasurementRepository {
 }
 
 // InsertMeasurement -- insert a measurement
-func (repo measurementRepository) InsertMeasurement(value float32, unit string) error {
+func (repo measurementRepository) InsertMeasurement(value float32, unit string, instanceId string) (error, *model.Measurement) {
 	logger.Debug("Inserting meaurement ...",
 		zap.Float32("value", value),
 		zap.String("unit", unit))
 
-	m := new(model.Measurement)
-	m.Value = value
-	m.Unit = unit
-	m.InstanceId = dbconfig.DeviceId
+	m := &model.Measurement{
+		Value:      value,
+		Unit:       unit,
+		InstanceId: dbconfig.DeviceId,
+	}
 	affected, err := repo.xormengine.Insert(m)
 
 	if err != nil {
-		return err
-	} else {
-		logger.Info("Measurement successfully inserted measurement.", zap.Int64("number_of_insertions", affected))
-		logger.Info("  --> measurement_id", zap.Int64("measurement_id", m.Id))
+		return err, nil
 	}
 
-	return nil
+	logger.Info("Measurement successfully inserted measurement.", zap.Int64("number_of_insertions", affected))
+	logger.Info("  --> measurement_id", zap.Int64("measurement_id", m.Id))
+
+	return nil, m
 }
 
-func (repo measurementRepository) FindMeasurements() {
-	var measurements []model.Measurement
-	err := repo.xormengine.Where("instance_id = ?", dbconfig.DeviceId).Limit(100).Find(&measurements)
+func (repo measurementRepository) FindAllMeasurements() (error, []*model.Measurement) {
+	var measurements []*model.Measurement
+	err := repo.xormengine.
+		Where("instance_id = ?", dbconfig.DeviceId).
+		//Limit(100).
+		Find(&measurements)
 	if err != nil {
-		panic(err)
+		return nil, nil
 	}
-	if measurements != nil && len(measurements) > 0 {
-		logger.Info("We have been here already: Found existing measurements for our device-id.", zap.String("device-id", dbconfig.DeviceId))
+	return nil, measurements
+}
+
+func (repo measurementRepository) FindMeasurementByID(measurementId string) (error, *model.Measurement) {
+	var measurements []model.Measurement
+	err := repo.xormengine.
+		//Where("instance_id = ? and id = ?", dbconfig.DeviceId, measurementId).
+		Where("id = ?", measurementId).
+		Limit(100).
+		Find(&measurements)
+	if err != nil {
+		return err, nil
 	}
+	return nil, &measurements[0]
 }
 
 /**
@@ -82,4 +98,3 @@ func (repo measurementRepository) ensureTableExists() error {
 
 	return nil
 }
-

@@ -27,11 +27,6 @@ func main() {
 	database.Open(&cfg)
 	defer database.Close()
 
-	// TEST...
-	measurementRepo := database.NewMeasurementRepository()
-	measurementRepo.InsertMeasurement(17, "Celsius")
-	measurementRepo.FindMeasurements()
-
 	// REST stuff
 	chiRouter := chi.NewMux()
 	if err := web.SetupChi(chiRouter); err != nil {
