@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"raspi_readtemp/logging"
+	"raspi_temperature_service/consul"
 	"raspi_temperature_service/database"
 	"raspi_temperature_service/web"
 	"syscall"
@@ -19,6 +20,9 @@ var logger = logging.New("raspi_temperature_service_main", false)
 const DB_CONFIG_FILENAME = "dbconfig.yml"
 
 func main() {
+	// channel for receiving interruptions
+	sigs := make(chan os.Signal, 1)
+
 	logger.Info("### STARTUP")
 
 	// INIT
@@ -26,6 +30,9 @@ func main() {
 	readDatabaseConfig(&cfg)
 	database.Open(&cfg)
 	defer database.Close()
+
+	// CONSUL registration
+	consul.Setup()
 
 	// REST stuff
 	chiRouter := chi.NewMux()
@@ -35,15 +42,17 @@ func main() {
 	}
 	if err := http.ListenAndServe(":8083", chiRouter); err != nil {
 		logger.Error("Error starting http listener", zap.Error(err))
+
 		os.Exit(1)
+		//sigs <- os.Interrupt
 	}
 
-	// wait indefinitely until external abortion
-	sigs := make(chan os.Signal, 1)
+	// wait for external termination
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM) // Ctrl + c
 	<-sigs
 	logger.Info("### EXIT")
 }
+
 
 // ==== I/O and properties ====
 
