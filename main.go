@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/go-chi/chi"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
@@ -18,6 +19,7 @@ import (
 var logger = logging.New("raspi_temperature_service_main", false)
 
 const DB_CONFIG_FILENAME = "dbconfig.yml"
+var PORT = 8083
 
 func main() {
 	// channel for receiving interruptions
@@ -32,7 +34,7 @@ func main() {
 	defer database.Close()
 
 	// CONSUL registration
-	consul.Setup()
+	consul.Setup(PORT)
 
 	// REST stuff
 	chiRouter := chi.NewMux()
@@ -40,7 +42,8 @@ func main() {
 		logger.Error("Error registering server", zap.Error(err))
 		os.Exit(1)
 	}
-	if err := http.ListenAndServe(":8083", chiRouter); err != nil {
+	portDefinition := fmt.Sprintf(":%d", PORT)
+	if err := http.ListenAndServe( portDefinition, chiRouter); err != nil {
 		logger.Error("Error starting http listener", zap.Error(err))
 
 		os.Exit(1)
