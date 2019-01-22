@@ -4,18 +4,28 @@ import (
 	consulApi "github.com/hashicorp/consul/api"
 	"go.uber.org/zap"
 	"raspi_readtemp/logging"
+	"strconv"
 	"time"
 )
 
 var logger = logging.New("raspi_temperature_service_consulclient", false)
-const SERVICE_NAME = "raspi-temperature-service_FOOBAR"
-const consulTTL string = "10s"
 var consulAgent *consulApi.Agent
 
-func Setup(servicePort int) {
+type ConsulClientConfig struct {
+	ConsulServerIP	string `yaml:"consul-server-ip"`
+	TTL 			string `yaml:"ttl"`
+	Port 			string `yaml:"client-port"`
+	Address			string `yaml:"client-address"`
+	ServiceName		string `yaml:"service-name"`
+}
+var consulCfg *ConsulClientConfig
+
+func Setup(cfg *ConsulClientConfig) {
+	consulCfg = cfg
 	// 1) init
+	// yeah, i know: i could have read that via json instead of yaml
 	consulClientConfig := consulApi.DefaultConfig()
-	consulClientConfig.Address = "192.168.171.34:8500"
+	consulClientConfig.Address = consulCfg.ConsulServerIP
 	consulClient, err := consulApi.NewClient(consulClientConfig)
 	if err != nil {
 		logger.Error("Cannot init Consul client.")
@@ -23,14 +33,15 @@ func Setup(servicePort int) {
 	}
 
 	// 2) TEST: Agent
+	port, _ := strconv.ParseInt(consulCfg.Port, 10, 32)
 	consulAgent = consulClient.Agent()
 	serviceDef := &consulApi.AgentServiceRegistration{
-		Name: SERVICE_NAME,
+		Name: consulCfg.ServiceName,
 		Tags: []string{"raspi", "temperature"},
 		Address: "dummy.hostname.domain",
-		Port: servicePort,
+		Port: int(port),
 		Check: &consulApi.AgentServiceCheck{
-			TTL: consulTTL,
+			TTL: consulCfg.TTL,
 		},
 	}
 	if err := consulAgent.ServiceRegister(serviceDef); err != nil {
@@ -48,17 +59,17 @@ func update(check func() (bool, error)) {
 	ok, err := check()
 	if !ok {
 		logger.Error("service check not OK", zap.Error(err))
-		if agentErr := consulAgent.FailTTL("service:" + SERVICE_NAME, err.Error()); agentErr != nil {
+		if agentErr := consulAgent.FailTTL("service:" + consulCfg.ServiceName, err.Error()); agentErr != nil {
 			logger.Error("Failed to notify consul", zap.Error(err))
 		}
 	} else {
-		if agentErr := consulAgent.PassTTL("service:" + SERVICE_NAME, ""); agentErr != nil {
+		if agentErr := consulAgent.PassTTL("service:" + consulCfg.ServiceName, ""); agentErr != nil {
 			logger.Error("Failed to notify consul", zap.Error(err))
 		}
 	}
 }
 func updateConsul(check func() (bool, error)) {
-	interval, err := time.ParseDuration(consulTTL)
+	interval, err := time.ParseDuration(consulCfg.TTL)
 	if err != nil {
 		panic("Invalid TTL")
 	}

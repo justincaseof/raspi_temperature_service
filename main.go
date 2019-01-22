@@ -17,8 +17,6 @@ import (
 
 var logger = logging.New("raspi_temperature_service_main", false)
 
-var PORT = 8083
-
 func main() {
 	// channel for receiving interruptions
 	sigs := make(chan os.Signal, 1)
@@ -26,15 +24,15 @@ func main() {
 	logger.Info("### STARTUP")
 
 	// INIT
-	var cfg database.DBConfig
 	var scfg config.ServiceConfiguration
-	readDatabaseConfig(&scfg)
-	readDatabaseConfig(&cfg)
-	database.Open(&cfg)
+	config.ReadConfig(&scfg)
+
+	// DB
+	database.Open(&scfg.DBConfig)
 	defer database.Close()
 
 	// CONSUL registration
-	consul.Setup(PORT)
+	consul.Setup(&scfg.ConsulClientConfig)
 
 	// REST stuff
 	chiRouter := chi.NewMux()
@@ -42,8 +40,8 @@ func main() {
 		logger.Error("Error registering server", zap.Error(err))
 		os.Exit(1)
 	}
-	portDefinition := fmt.Sprintf(":%d", PORT)
-	if err := http.ListenAndServe( portDefinition, chiRouter); err != nil {
+	listen := fmt.Sprintf(":%s", scfg.ConsulClientConfig.Port)
+	if err := http.ListenAndServe( listen, chiRouter); err != nil {
 		logger.Error("Error starting http listener", zap.Error(err))
 
 		os.Exit(1)

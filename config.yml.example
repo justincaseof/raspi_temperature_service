@@ -1,7 +1,14 @@
-type: postgres
-host: 127.0.0.1
-port: 5432
-dbname: pitemp
-username: pitemp
-password: pitemp
-device-id: dev_device_id
+consul-client:
+  consul-server-ip: 127.0.0.1:8500
+  ttl: 10s
+  service-name: raspi-temperature-service
+  client-address: dummy.hostname.domain
+  client-port: 8083
+dbconfig:
+  type: postgres
+  host: 127.0.0.1
+  port: 5432
+  dbname: pitemp
+  username: pitemp
+  password: pitemp
+  device-id: dev_device_id
