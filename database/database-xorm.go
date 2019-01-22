@@ -27,7 +27,7 @@ var dbconfig *DBConfig
 var xormengine *xorm.Engine
 var logger = logging.NewDevLog("database-xorm")
 
-// Open -- Opens a database connection according to yaml file 'dbconfig.yml'
+// Open -- Opens a database connection according to given config
 func Open(dbconfigArg *DBConfig) {
 	var err error
 	dbconfig = dbconfigArg

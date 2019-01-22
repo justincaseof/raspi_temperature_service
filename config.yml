@@ -1,0 +1,15 @@
+type: postgres
+host: 192.168.171.34
+port: 5432
+dbname: pitemp
+username: pitemp
+password: pitemp
+device-id: dev_probook440
+dbconfig:
+  type: xxx
+  host: 1.1.1.1
+  port: 1234
+  dbname: xxx
+  username: xxx
+  password: xxx
+  device-id: xxx

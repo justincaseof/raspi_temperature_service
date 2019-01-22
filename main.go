@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"github.com/go-chi/chi"
 	"go.uber.org/zap"
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 	"raspi_readtemp/logging"
+	"raspi_temperature_service/config"
 	"raspi_temperature_service/consul"
 	"raspi_temperature_service/database"
 	"raspi_temperature_service/web"
@@ -18,7 +17,6 @@ import (
 
 var logger = logging.New("raspi_temperature_service_main", false)
 
-const DB_CONFIG_FILENAME = "dbconfig.yml"
 var PORT = 8083
 
 func main() {
@@ -29,6 +27,8 @@ func main() {
 
 	// INIT
 	var cfg database.DBConfig
+	var scfg config.ServiceConfiguration
+	readDatabaseConfig(&scfg)
 	readDatabaseConfig(&cfg)
 	database.Open(&cfg)
 	defer database.Close()
@@ -54,23 +54,4 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM) // Ctrl + c
 	<-sigs
 	logger.Info("### EXIT")
-}
-
-
-// ==== I/O and properties ====
-
-// read config from 'dbconfig.yml'
-func readDatabaseConfig(dbconfig *database.DBConfig) {
-	var err error
-	var bytes []byte
-	bytes, err = ioutil.ReadFile(DB_CONFIG_FILENAME)
-	if err != nil {
-		logger.Error("Cannot open config file", zap.String("filename", DB_CONFIG_FILENAME))
-		panic(err)
-	}
-	err = yaml.Unmarshal(bytes, dbconfig)
-	if err != nil {
-		panic(err)
-	}
-	logger.Info("DBConfig parsed.")
 }
